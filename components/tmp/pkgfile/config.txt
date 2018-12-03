@@ -1,0 +1,45 @@
+# Package Information
+company=""
+description=""
+modelname=""
+version=""
+releaseDate=""
+signature=""
+# Package Configuration
+start_customer=y
+install_dtb=n
+update_etc=y
+install_avfile_count=1
+reboot_delay=5
+efuse_key=0
+rpmb_fw=0
+boot_image=1
+secure_boot=0
+fw = boot package5/bootimg.bin 0x20000000
+fw = boot2 package5/bootimg.bin 0x20000000
+fw = recovery package5/recoveryimg.bin 0x23200000
+fw = recovery2 package5/recoveryimg.bin 0x23200000
+fw = audio2 package5/bluecore.audio.enc.A00 0x0f900000
+fw = pcpu2 package5/pcpu.emmc.bin 0x20000000
+fw = audioKernel package5/bluecore.audio.enc.A00 0x0f900000 
+fw = pcpu package5/pcpu.emmc.bin 0x20000000
+fw = imageFile package5/bootfile.image 0x1e800000   
+###
+###	  part = (name mount_point filesystem file size)
+part = system /system ext4 package5/system.bin 2147483648
+part = cache /cache ext4 package5/cache.bin 419430400
+part = vendor /vendor ext4 package5/vendor.bin 314572800
+part = uboot /uboot ext4 package5/uboot_p.bin 4194304
+part = logo /logo ext4 package5/logo_p.bin 16777216
+#part = backup /backup ext4 package5/backup.bin 419430400
+part = verify /verify ext4 package5/verify_p.bin 104857600
+#part = install /install ext4 package5/install_p.bin 524288000
+part = misc /misc ext4 package5/misc.bin 4194304
+part = param /param ext4 package5/param_p.bin 4194304
+part = vbmeta /vbmeta ext4 package5/vbmeta.bin 1048576
+part = dtbo /dtbo ext4 package5/dtbo.bin 8388608
+#part = data /data ext4 package5/data.bin 3313500160
+#part = data /data ext4 package5/data.bin 3309305856
+part = data /data ext4 package5/data.bin 3299868672
+###
+###	  part = (name mount_point filesystem file size)

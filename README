@@ -1,0 +1,33 @@
+*****************************************************
+***### installer version info ###***
+*****************************************************
+1. android:
+   a. 1395 for m,n: components/installer/install_a_1395
+   b. 1295,1395 for o: components/installer/install_a_GPT
+   c. 1295: components/installer/install_a
+
+2. nas:
+   components/packages/omv/installer/install_a
+
+3. glinux:
+   a. 1395: components/packages/generic/installer/install_a_1395
+   b. 1295: components/packages/generic/installer/install_a
+
+*****************************************************   
+***### how to build installer with source code ###***
+*****************************************************
+####for sparse image, remove PART_RESIZE=1
+1. install_a: in kylin branch
+   $ make
+2. install_a_1395: in master branch
+   $ make
+3. install_a_GPT: in master branch
+   $ make GPT=1
+4. install_a_GPT_AB: in master branch
+   $ make GPT=1 AB_SYSTEM=1 ENABLE_FSBL_VM=1
+5. install_a_GPT_kylin: in master branch
+   $ make GPT=1 TEE_2_1=1
+6. install_a_thor: in thor branch
+   $ make
+7. install_a_thor_GPT: in thor branch
+   $ make GPT=1

@@ -1,0 +1,72 @@
+#!/sbin/busybox ash
+####!/sbin/busybox sh
+
+echo "******** We are starting from loader_m now, seems should execute loader_m tool."
+#sleep 2
+
+device_node_dir="/dev/block"
+mount_dir="/mnt/usb"
+MOUNT_DEVICE_NODE=
+to_run_loader_m=0
+
+remove_action() {
+        umount ${1}
+        rm -rf ${2}
+}
+
+try_mount() {
+	echo "In try_mount: ${MOUNT_DEVICE_MODE}"
+	busybox mount -t vfat ${MOUNT_DEVICE_NODE} ${mount_dir}
+}
+
+# try mount USB, now only searching /dev/block/sda or /dev/block/sda1...
+if [ -d ${device_node_dir} ]; then
+#	for node_file in ${device_node_dir}/*; do
+#		if [[ ${node_file} == "*sd*" ]]; then
+#			echo "=> ${node_file}"
+#			if [ -b ${node_file} ]; then
+#				full_node_name="${device_node_dir}/${node_file}"
+#				echo ${full_node_nmae}
+#				MOUNT_DEVICE_NODE="${device_node_dir}/${node_file}"
+#				try_mount
+#			else
+#				echo "${node_file} is not block deivce."
+#			fi
+#		fi
+#	done
+
+	until [ -e "${device_node_dir}/sda1" ]
+	do 
+		sleep 1
+		echo -e "=> Not fund usb disk"
+	done
+
+	busybox mkdir /mnt/usb
+	if [ -e "${device_node_dir}/sda" ]; then
+		echo "=> Got ${device_node_dir}/sda..."
+		MOUNT_DEVICE_NODE="${device_node_dir}/sda"
+		try_mount 
+		#/sbin/busybox mount -t vfat "/dev/block/sda" "/mnt"
+	else 
+		echo "=> no ${device_node_dir}/sda..."
+	fi
+	if [ -e "${device_node_dir}/sda1" ]; then
+		echo "=> Got ${device_node_dir}/sda1..."
+		MOUNT_DEVICE_NODE="${device_node_dir}/sda1"
+		try_mount 
+		#/sbin/busybox mount -t vfat "/dev/block/sda1" "/mnt"
+	else 
+		echo "=> no ${device_node_dir}/sda1..."
+	fi
+else
+	echo "no ${device_node_dir} found."
+fi
+
+busybox sleep 5
+
+# run loader_m
+#if [ "/sbin/busybox ls ${mount_dir} | /sbin/busybox wc -l" -gt 0]; then
+	echo "******** Finally, /sbin/loader_m is starting running."
+	#/sbin/loader_m > /dev/console 2>&1
+	#/sbin/loader_m 
+#fi 

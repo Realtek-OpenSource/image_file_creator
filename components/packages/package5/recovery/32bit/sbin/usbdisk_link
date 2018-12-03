@@ -1,0 +1,57 @@
+#!/bin/busybox ash
+
+remove_action() {
+	umount ${1}
+	rm -rf ${2}
+}
+
+if [ ! -b ${MDEV} ]; then exit 0; fi
+
+#mountdir="/media"
+mountdir="/mnt"
+
+partition=0
+
+0< /dev/fd0
+1> /dev/fd1
+
+if [ "X${ACTION}" == "Xadd" ]; then
+	if [ "X${DEVTYPE}" == "Xpartition" ]; then
+		partition=1;
+	elif [ "X${DEVTYPE}" == "Xdisk" ]; then
+		if dd if=${MDEV} bs=512 count=1 2>/dev/null | grep "FAT" 1>/dev/null; then
+			partition=1
+		fi
+	fi
+fi
+
+if [ "X${ACTION}" == "Xremove" ]; then
+	if [ "X${DEVTYPE}" == "Xpartition" ] || [ "X${DEVTYPE}" == "Xdisk" ]; then
+		if grep "^/dev/${MDEV} ${mountdir}/" /proc/mounts 1>/dev/null; then
+			partition=1
+		fi
+	fi
+	for dir in $( ls ${mountdir} )
+	do
+		if [ -d ${mountdir}/${dir} ]; then
+			if !grep "${mountdir}/${dir}" /proc/mounts; then
+				rm -rf ${mountdir}/${dir}
+			fi
+		fi
+	done
+fi
+
+if [ ${partition} -ne 1 ]; then exit 0; fi
+
+if [ "X${ACTION}" == "Xadd" ]; then
+	mkdir -p ${mountdir}/${MDEV}
+	fstype=`lsblk -o KNAME,FSTYPE|grep ${MDEV}|awk '{print $2}'`
+	if [ ${fstype} == "vfat" ]; then
+		mount -t vfat -o rw,codepage=950,iocharset=utf8,fmask=0666 /dev/${MDEV} ${mountdir}/${MDEV}
+	else
+		mount -t auto -o sync /dev/${MDEV} ${mountdir}/${MDEV}
+	fi
+elif ["X${ACTION}" == "Xremove" ]; then
+	procmounts=$(grep "^/dev/${MDEV} ${mountdir}/" /proc/mounts)
+	remove_action ${procmounts}
+fi

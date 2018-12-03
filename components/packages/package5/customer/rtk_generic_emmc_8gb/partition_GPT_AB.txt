@@ -1,0 +1,12 @@
+###
+###	  part = (name mount_point filesystem file size)
+part = system /system ext4 package5/system.bin 767557632
+part = system_b /system ext4 package5/system_b.bin 767557632
+part = vendor /vendor ext4 package5/vendor.bin 209715200
+part = vendor_b /vendor ext4 package5/vendor_b.bin 209715200
+part = logo /logo ext4 package5/logo_p.bin 16777216
+part = logo_b /logo ext4 package5/logo_p_b.bin 16777216
+part = verify /verify ext4 package5/verify_p.bin 104857600
+part = misc /misc ext4 package5/misc.bin 4194304
+part = param /param ext4 package5/param_p.bin 4194304
+part = data /data ext4 package5/data.bin 5200936960

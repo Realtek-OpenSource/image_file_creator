@@ -380,14 +380,12 @@ all: gen_config prepare_file secure_case enableVMX
 						else \
 							tar --delete --file=$(IMGFILE_PATH) $(PACKAGES)/rescue_boot_area.bin; \
 						fi; \
-						tar --delete --file=$(IMGFILE_PATH) $(PACKAGES)/trust_boot_area.bin.aes; \
 					elif [ '$(vmx_install_mode)' = 2 ]; then \
 						if [ '$(SECURE_BOOT)' = 'y' ]; then \
 							tar --delete --file=$(IMGFILE_PATH) $(PACKAGES)/normal_boot_area.bin.aes; \
 						else \
 							tar --delete --file=$(IMGFILE_PATH) $(PACKAGES)/normal_boot_area.bin; \
 						fi; \
-						tar --delete --file=$(IMGFILE_PATH) $(PACKAGES)/trust_boot_area.bin.aes; \
 					elif [ '$(vmx_install_mode)' = 3 ]; then \
 						if [ '$(SECURE_BOOT)' = 'y' ]; then \
 							tar --delete --file=$(IMGFILE_PATH) $(PACKAGES)/rescue_boot_area.bin.aes; \
@@ -400,8 +398,6 @@ all: gen_config prepare_file secure_case enableVMX
 						else \
 							tar --delete --file=$(IMGFILE_PATH) $(PACKAGES)/normal_boot_area.bin; \
 						fi; \
-					elif [ '$(vmx_install_mode)' = 5 ]; then \
-						tar --delete --file=$(IMGFILE_PATH) $(PACKAGES)/trust_boot_area.bin.aes; \
 					fi; \
 				else \
 					if [ '$(vmx_install_mode)' = 0 ]; then \
@@ -1002,7 +998,7 @@ prepare_file:
 	elif [ '$(VMX)' = 'y' ] && [ '$(VMX_TYPE)' = 'ultra' ]; then \
 		cp -R installer/install_a_1395.vmx.ultra tmp/pkgfile/install_a; \
 	else \
-		cp -R installer/install_a_1395 tmp/pkgfile/install_a; \
+		cp -R installer/install_a_nonGPT tmp/pkgfile/install_a; \
 	fi;
 	$(QUIET) if [ '$(NAS_IMGS)' = 'y' ] && [ '$(ANDROID_IMGS)' != 'y' ]; then \
 		cp -R installer/teeUtility_nas.tar tmp/pkgfile/teeUtility.tar; \
@@ -1134,7 +1130,7 @@ prepare_file:
 			else \
 				cp -rf 64bit/* rootfs_recovery/; \
 			fi; \
-			cp $(CURDIR)/../../android/out/target/product/$(ANDROID_PRODUCT)/recovery/root/sbin/recovery rootfs_recovery/sbin/recovery; \
+			cp -rf $(CURDIR)/../../android/out/target/product/$(ANDROID_PRODUCT)/recovery/root/sbin/* rootfs_recovery/sbin/; \
 			./mkrootfs.sh; \
 			cp rescue.root.emmc.cpio.gz_pad.img $(TMP)/rescue.root.$(LAYOUT).cpio.gz_pad.img; \
 		else \
@@ -1145,7 +1141,23 @@ prepare_file:
 					cp packages/$(TARGET)/rescue.root.$(LAYOUT).cpio.gz_pad_32bit.img tmp/rescue.root.$(LAYOUT).cpio.gz_pad.img; \
 				fi; \
 			elif [ '$(LAYOUT)' = 'emmc' ] && [ -f ./packages/$(TARGET)/rescue.root.$(LAYOUT).cpio.gz_pad_1395.img ]; then \
-				cp packages/$(TARGET)/rescue.root.$(LAYOUT).cpio.gz_pad_1395.img tmp/rescue.root.$(LAYOUT).cpio.gz_pad.img; \
+				if [ '$(TARGET_CHIP_ARCH)' = 'arm64' ]; then \
+					cp packages/$(TARGET)/rescue.root.$(LAYOUT).cpio.gz_pad_1395.img tmp/rescue.root.$(LAYOUT).cpio.gz_pad.img; \
+				else \
+				#for 1395+kk 32-bit kernel \
+					cd packages/$(TARGET)/recovery/ && \
+					rm -rf rootfs_recovery/; \
+					mkdir rootfs_recovery/; \
+					cp -rf $(CURDIR)/../../android/out/target/product/hercules/recovery/root/* rootfs_recovery/; \
+					rm rootfs_recovery/*; \
+					cp $(CURDIR)/../../android/out/target/product/hercules/recovery/root/*default* rootfs_recovery/; \
+					rm -rf rootfs_recovery/bin rootfs_recovery/sbin/ rootfs_recovery/system; \
+					cp -rf 32bit/* rootfs_recovery/; \
+					cp -rf $(CURDIR)/../../android/out/target/product/hercules/recovery/root/sbin/* rootfs_recovery/sbin/; \
+					mkdir rootfs_recovery/cache; mkdir rootfs_recovery/mnt; \
+					./mkrootfs.sh; \
+					cp rescue.root.emmc.cpio.gz_pad.img $(TMP)/rescue.root.$(LAYOUT).cpio.gz_pad.img; \
+				fi; \
 			fi; \
 		fi; \
 	fi;

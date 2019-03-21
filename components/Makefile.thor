@@ -146,10 +146,14 @@ ifeq ($(ANDROID_BRANCH), android-9)
     ANDROID_FILES := bootimg.bin recoveryimg.bin
 endif
 
+ifeq ($(AUDIOADDR), 0)
+AUDIO_FILE := 
+else
 ifeq ($(CHIP_REV), 1)
 AUDIO_FILE := bluecore.audio.enc.A00
 else
 AUDIO_FILE := bluecore.audio.enc.A01
+endif
 endif
 
 ifeq ($(HYPERVISOR), y)
@@ -347,7 +351,7 @@ all: gen_config prepare_file secure_case enableVMX
 			dd if=/dev/zero  bs=1 count=`expr \( 4096000000 - \`ls -lG $(IMGFILE_PATH) | awk -F' ' '{print $$4}'\` \) % 4096` >> $(IMGFILE_PATH); \
 		fi; \
 	fi
-	$(QUIET) if [ '$(SECURE_BOOT)' = y ] && [ '$(efuse_key)' = '1' ] && [ '$(VMX)' = n ]; then \
+	$(QUIET) if [ '$(SECURE_BOOT)' = y ] && [ '$(efuse_key)' = '1' ] && [ '$(VMX)' = n ] && [ '$(CA_TYPE)' = 'none' ]; then \
 		cd tmp/; \
 		cp $(SECURE_KEY_FILE) pkgfile/; \
 		cd pkgfile/; \
@@ -1058,7 +1062,9 @@ else
 				echo "fw = rescueDT2 $(TARGET)/rescue.$(LAYOUT).dtb $(RESCUEDT_ADDR)" >> tmp/pkgfile/config.txt; \
 				echo "fw = RootFS2 $(TARGET)/rescue.root.$(LAYOUT).cpio.gz_pad.img$(F_EXT) $(RESCUEROOTFSADDR)" >> tmp/pkgfile/config.txt; \
 				echo "fw = Kernel2 $(TARGET)/$(LAYOUT).uImage$(F_EXT) $(LINUXADDR)" >> tmp/pkgfile/config.txt; \
+				if [ ! '$(AUDIO_FILE)' = '' ]; then \
 				echo "fw = audio2 $(TARGET)/$(AUDIO_FILE) $(AUDIOADDR)" >> tmp/pkgfile/config.txt; \
+				fi; \
 				echo "fw = kernelDT2 $(TARGET)/android.$(LAYOUT).dtb $(KERNELDT_ADDR) $(KERNELDT_MINSIZE)" >> tmp/pkgfile/config.txt; \
 				if [ '$(NAS_IMGS)' != 'y' ] && [ '$(ANDROID_IMGS)' = 'y' ]; then \
 					echo "fw = kernelRootFS2 $(TARGET)/android.root.$(LAYOUT).cpio.gz_pad.img$(F_EXT) $(KERNELROOTFSADDR)" >> tmp/pkgfile/config.txt; \
@@ -1075,7 +1081,9 @@ else
 			fi; \
 			if [ -f ./packages/$(TARGET)/$(LAYOUT).uImage ]; then echo "fw = linuxKernel $(TARGET)/$(LAYOUT).uImage $(LINUXADDR) $(LINUX_MINSIZE)" >> tmp/pkgfile/config.txt; fi; \
 		fi; \
+		if [ ! '$(AUDIO_FILE)' = '' ]; then \
 		echo "fw = audioKernel $(TARGET)/$(AUDIO_FILE) $(AUDIOADDR) $(AUDIO_MINSIZE)" >> tmp/pkgfile/config.txt; \
+		fi; \
 		if [ '$(TEE_FW)' = 'y' ]; then \
 			echo "fw = tee $(TARGET)/tee_enc.bin $(TEEADDR)" >> tmp/pkgfile/config.txt; \
 			echo "fw = BL31 $(TARGET)/bl31_enc.bin $(BL31ADDR)" >> tmp/pkgfile/config.txt; \
@@ -1163,11 +1171,11 @@ prepare_file:
 	if [ '$(ANDROID_BRANCH)' = 'android-8' ] && [ '$(enable_ab_system)' = 'y' ]; then \
 		cp -R installer/install_a_GPT_AB tmp/pkgfile/install_a; \
 	elif [ '$(ANDROID_BRANCH)' = 'android-8' ] || [ '$(ANDROID_BRANCH)' = 'android-9' ]; then \
-		cp -R installer/install_a_thor_GPT tmp/pkgfile/install_a; \
+		cp -R installer/install_a_GPT tmp/pkgfile/install_a; \
 	elif [ '$(VMX)' = 'y' ] && [ '$(VMX_TYPE)' = 'ultra' ]; then \
 		cp -R installer/install_a_1395.vmx.ultra tmp/pkgfile/install_a; \
 	else \
-		cp -R installer/install_a_thor tmp/pkgfile/install_a; \
+		cp -R installer/install_a_nonGPT tmp/pkgfile/install_a; \
 	fi;
 	$(QUIET) if [ '$(NAS_IMGS)' = 'y' ] && [ '$(ANDROID_IMGS)' != 'y' ]; then \
 		cp -R installer/teeUtility_nas.tar tmp/pkgfile/teeUtility.tar; \
@@ -1299,7 +1307,7 @@ prepare_file:
 			else \
 				cp -rf 64bit/* rootfs_recovery/; \
 			fi; \
-			cp $(CURDIR)/../../android/out/target/product/$(ANDROID_PRODUCT)/recovery/root/sbin/recovery rootfs_recovery/sbin/recovery; \
+			cp -rf $(CURDIR)/../../android/out/target/product/$(ANDROID_PRODUCT)/recovery/root/sbin/* rootfs_recovery/sbin/; \
 			./mkrootfs.sh; \
 			cp rescue.root.emmc.cpio.gz_pad.img $(TMP)/rescue.root.$(LAYOUT).cpio.gz_pad.img; \
 		else \
@@ -1473,7 +1481,9 @@ secure_case: secure_check
 		if [ '$(NAS_IMGS)' = 'y' ]; then \
 			cd tmp && \
 			$(GZIP_PATH) -9 $(LAYOUT).uImage && mv $(LAYOUT).uImage.gz pkgfile/$(TARGET)/$(LAYOUT).uImage; \
+			if [ ! '$(AUDIO_FILE)' = '' ]; then \
 			$(LZMA_PATH) e $(AUDIO_FILE) pkgfile/$(TARGET)/$(AUDIO_FILE); \
+			fi; \
 			$(LZMA_PATH) e rescue.root.$(LAYOUT).cpio.gz_pad.img pkgfile/$(TARGET)/rescue.root.$(LAYOUT).cpio.gz_pad.img$(F_EXT); \
 			cd -; \
 		fi; \
@@ -1508,8 +1518,10 @@ secure_case: secure_check
 			fi; \
 			cp pkgfile/$(TARGET)/$(LAYOUT).uImage$(F_EXT).aes pkgfile/$(TARGET)/$(LAYOUT).uImage2$(F_EXT).aes; \
 			cp pkgfile/$(TARGET)/rescue.root.$(LAYOUT).cpio.gz_pad.img.aes pkgfile/$(TARGET)/rescue.root2.$(LAYOUT).cpio.gz_pad.img.aes; \
+			if [ ! '$(AUDIO_FILE)' = '' ]; then \
 			cp $(AUDIO_FILE) pkgfile/$(TARGET)/$(AUDIO_FILE); \
 			cp $(AUDIO_FILE) pkgfile/$(TARGET)/$(AUDIO_FILE2); \
+			fi; \
 			if [ '$(DTB_ENC)' = 'y' ]; then \
 				cp pkgfile/$(TARGET)/rescue.$(LAYOUT).dtb.aes pkgfile/$(TARGET)/rescue2.$(LAYOUT).dtb.aes; \
 			else \
@@ -1552,29 +1564,33 @@ secure_case: secure_check
 	$(QUIET) if [ '$(LAYOUT)' = 'emmc' ] || [ '$(LAYOUT)' = 'sata' ]; then \
 		cd tmp && \
 		if [ '$(SECURE_BOOT)' = 'y' ] && [ '$(VMX)' = 'n' ]; then \
-			if [ ! -f $(SECURE_KEY3_FILE) ] || [ ! -f $(RSA_FW_PRIVATE_KEY) ]; then \
+			if [ ! -f $(SECURE_KEY_FILE) ] || [ ! -f $(RSA_FW_PRIVATE_KEY) ]; then \
 				echo "We cannot find the keys!"; \
 				exit 1; \
 			fi; \
 			$(foreach file,$(ANDROID_FILES), \
-				$(DO_SHA256_PATH) $(file) $(file)_padding.bin $(file)_signature.bin;rm $(file)_padding.bin; \
+				$(DO_SHA256_PATH) $(file) $(file)_padding.bin $(file)_signature.bin; \
+				cat $(file) $(file)_padding.bin > $(file)_padding_final.bin; \
 				$(call hwrsa-sign-npinv64, $(RSA_FW_PRIVATE_KEY), $(file)_signature.bin, $(file)_signature_enc.bin); \
-				$(OPENSSL) enc -e -aes-128-ecb -K `hexdump -e '16/1 "%02x"' $(SECURE_KEY3_FILE)` -nopad -in $(file) -out $(file)_aes_tmp.bin; \
+				$(OPENSSL) enc -e -aes-128-ecb -K `hexdump -e '16/1 "%02x"' $(SECURE_KEY_FILE)` -nopad -in $(file)_padding_final.bin -out $(file)_aes_tmp.bin; \
 				cat $(file)_aes_tmp.bin $(file)_signature_enc.bin > $(file).aes; \
 				cp $(file).aes pkgfile/$(TARGET); \
 			) \
 			if [ '$(ANDROID_BRANCH)' != 'android-9' ]; then \
 				if [ '$(DTB_ENC)' = 'y' ]; then \
 					$(foreach file,$(DTB_FILES), \
-						$(DO_SHA256_PATH) $(file) $(file)_padding.bin $(file)_signature.bin; rm $(file)_padding.bin; \
+						$(DO_SHA256_PATH) $(file) $(file)_padding.bin $(file)_signature.bin; \
+						cat $(file) $(file)_padding.bin > $(file)_padding_final.bin; \
 						$(call hwrsa-sign-npinv64, $(RSA_FW_PRIVATE_KEY), $(file)_signature.bin, $(file)_signature_enc.bin); \
-						$(OPENSSL) enc -e -aes-128-ecb -K `hexdump -e '16/1 "%02x"' $(SECURE_KEY3_FILE)` -nopad -in $(file) -out $(file)_aes_tmp.bin; \
+						$(OPENSSL) enc -e -aes-128-ecb -K `hexdump -e '16/1 "%02x"' $(SECURE_KEY_FILE)` -nopad -in $(file)_padding_final.bin -out $(file)_aes_tmp.bin; \
 						cat $(file)_aes_tmp.bin $(file)_signature_enc.bin > $(file).aes; \
 						cp $(file).aes pkgfile/$(TARGET); \
 					) \
 				fi; \
 			fi; \
+			if [ ! '$(AUDIO_FILE)' = '' ]; then \
 			cp $(AUDIO_FILE) pkgfile/$(TARGET)/$(AUDIO_FILE); \
+			fi; \
 			if [ '$(TEE_FW)' = 'y' ]; then \
 				cp tee_enc.bin pkgfile/$(TARGET)/tee_enc.bin.aes; \
 				cp bl31_enc.bin pkgfile/$(TARGET)/bl31_enc.bin.aes; \
@@ -1596,7 +1612,9 @@ secure_case: secure_check
 				fi; \
 			fi; \
 			if [ '$(ANDROID_BRANCH)' = 'android-9' ]; then \
+				if [ ! '$(AUDIO_FILE)' = '' ]; then \
 				cp $(AUDIO_FILE) pkgfile/$(TARGET); \
+				fi; \
 				cp bootimg.bin recoveryimg.bin pkgfile/$(TARGET)/; \
 			else \
 				cp $(LAYOUT).uImage$(F_EXT) $(AUDIO_FILE) pkgfile/$(TARGET); \
@@ -1622,11 +1640,13 @@ secure_case: secure_check
 		if [ '$(SECURE_BOOT)' == y ]; then \
 			echo "Secure boot is not support fastboot mode."; \
 		else \
-			dd if=/dev/zero of=kernel-20m bs=1M count=20; \
-			dd if=$(LAYOUT).uImage of=kernel-20m conv=notrunc; \
-			cat kernel-20m  rescue.$(LAYOUT).dtb > kernel-dtb; \
-			mkbootimg --kernel kernel-dtb --ramdisk rescue.root.$(LAYOUT).cpio.gz_pad.img --second $(AUDIO_FILE) -o pkgfile/$(TARGET)/rescue.boot.img; \
-			rm kernel-20m; rm kernel-dtb; \
+			if [ '$(NAS_IMGS)' != 'y' ]; then \
+				dd if=/dev/zero of=kernel-20m bs=1M count=20; \
+				dd if=$(LAYOUT).uImage of=kernel-20m conv=notrunc; \
+				cat kernel-20m  rescue.$(LAYOUT).dtb > kernel-dtb; \
+				mkbootimg --kernel kernel-dtb --ramdisk rescue.root.$(LAYOUT).cpio.gz_pad.img --second $(AUDIO_FILE) -o pkgfile/$(TARGET)/rescue.boot.img; \
+				rm kernel-20m; rm kernel-dtb; \
+			fi; \
 		fi; \
 		if [ '$(ANDROID_IMGS)' = 'y' ]; then \
 			echo "Start copying ext4fs images ....."; \
@@ -1738,8 +1758,10 @@ enableVMX:
 					"0x`printf '%X' \`stat -c %s $(TMP)/pkgfile/$(PACKAGES)/bl31.bin\``" >> $(TMP)/pkgfile/trust_fw_config.txt; \
 				echo "tee 0x1 $(TEEADDR)" \
 					"0x`printf '%X' \`stat -c %s $(TMP)/pkgfile/$(PACKAGES)/tee.bin\``" >> $(TMP)/pkgfile/trust_fw_config.txt; \
+				if [ ! '$(AUDIO_FILE)' = '' ]; then \
 				echo "audioKernel 0x2 $(AUDIOADDR)" \
 					"0x`printf '%X' \`stat -c %s $(TMP)/pkgfile/$(PACKAGES)/$(AUDIO_FILE)\``" >> $(TMP)/pkgfile/trust_fw_config.txt; \
+				fi; \
 				rm lk.bin bluecore.audio tee.bin bl31.bin $(LAYOUT).uImage android.$(LAYOUT).dtb android.root.$(LAYOUT).cpio.gz_pad.img; \
 				rm rescue.lk.bin rescue.bluecore.audio rescue.$(LAYOUT).uImage rescue.$(LAYOUT).dtb rescue.root.$(LAYOUT).cpio.gz_pad.img;\
 				cd $(TMP); \

@@ -77,7 +77,7 @@ service run_loader_m /system/bin/logwrapper /sbin/run_loader_m.sh
     oneshot
 
 # Always start adbd on userdebug and eng builds
-on property:ro.debuggable=1
+on property:ro.debuggable=*
     write /sys/class/android_usb/android0/enable 1
     start adbd
     start console

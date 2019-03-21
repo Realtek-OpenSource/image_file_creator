@@ -56,6 +56,9 @@ my $enable_offline_gen = $ARGV[8];
 
 my $USED_FILE_CONTEXTS_PATH = "";
 my $FILE_CONTEXTS_PATH ="$package_path/root/file_contexts";
+
+my $SPARSE_HEADER_MAGIC = 0xed26ff3a;
+
 if (-e $FILE_CONTEXTS_PATH)
 {
     system("cp $FILE_CONTEXTS_PATH $tmp_path/file_contexts ");
@@ -338,6 +341,48 @@ sub make_ubifs_image
 
 }
 
+sub check_image_size
+{
+    $partition_label = $_[0];
+
+    $partition_size = $partitions_by_labels{$partition_label}{"image_size"};
+    $image_name = $partitions_by_labels{$partition_label}{"image_name"};
+    $image_size = -s "$tmp_path/pkgfile/$image_name";
+
+    unless (-e "$tmp_path/pkgfile/$image_name")
+    {
+        printf "image %s do not exist, skip check size\n", "$tmp_path/pkgfile/$image_name";
+        return;
+    }
+
+    open(TARGET_IMAGE, '<', "$tmp_path/pkgfile/$image_name") || die "Can't open file!\n";
+    read(TARGET_IMAGE, my $image_magic, 4);
+    $image_magic_le = unpack("V", $image_magic);
+    close(TARGET_IMAGE);
+
+    if ($SPARSE_HEADER_MAGIC eq $image_magic_le)
+    {
+        system("rm -f $tmp_path/carculate_temp.bin");
+        system("$SIMG2IMG $tmp_path/pkgfile/$image_name $tmp_path/carculate_temp.bin")&& exit 1;
+        $image_size = -s "$tmp_path/carculate_temp.bin";
+        system("rm -f $tmp_path/carculate_temp.bin");
+    }
+    else
+    {
+        $image_size = -s "$tmp_path/pkgfile/$image_name";
+    }
+
+    if ($image_size > $partition_size)
+    {
+        printf "The image for %s partition is over size. image size:[%s], partition size:[%s] \n", $partitions_by_labels{$partition_label}{"label"}, $image_size, $partition_size;
+        if ($SPARSE_HEADER_MAGIC eq $image_magic_le)
+        {
+            printf "remember to take care sparse format image\n";
+        }
+        exit 1;
+    }
+}
+
 sub make_ext4_image
 {
     $my_count = $_[0]; # partition count
@@ -497,6 +542,7 @@ sub make_ext4_image
             printf "processing: %s\n",$ext4_img;
             copy_binary_to_target($ext4_img, "$tmp_path/pkgfile/$package/");
         }
+        check_image_size($label_name);
     }
 }
 

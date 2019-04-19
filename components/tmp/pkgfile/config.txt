@@ -1,0 +1,46 @@
+# Package Information
+company=""
+description=""
+modelname=""
+version=""
+releaseDate=""
+signature=""
+# Package Configuration
+start_customer=y
+install_factory=y
+install_dtb=n
+update_etc=y
+install_avfile_count=1
+reboot_delay=5
+ifcmd0 = "cd ../../;cp -rpf tmp/install_factory/* tmp/factory/;"
+ifcmd1 = "rm -rf /tmp/factory/recovery;"
+efuse_key=0
+rpmb_fw=0
+boot_image=1
+secure_boot=0
+fw = GOLDimage package5/gold.recoveryimg.bin 0x23200000
+fw = boot package5/bootimg.bin 0x20000000
+fw = recovery package5/recoveryimg.bin 0x23200000
+fw = GOLDaudio package5/gold.bluecore.audio.enc.A01 0x0f900000
+fw = audioKernel package5/bluecore.audio.enc.A01 0x0f900000 
+fw = imageFile package5/bootfile.image 0x1e800000   
+###
+###	  part = (name mount_point filesystem file size)
+part = system /system ext4 package5/system.bin 1610612736
+part = cache /cache ext4 package5/cache.bin 16777216
+part = vendor /vendor ext4 package5/vendor.bin 268435456
+part = uboot /uboot ext4 package5/uboot_p.bin 4194304
+part = logo /logo ext4 package5/logo_p.bin 16777216
+#part = backup /backup ext4 package5/backup.bin 419430400
+part = verify /verify ext4 package5/verify_p.bin 104857600
+#part = install /install ext4 package5/install_p.bin 524288000
+part = misc /misc ext4 package5/misc.bin 4194304
+part = param /param ext4 package5/param_p.bin 4194304
+part = vbmeta /vbmeta ext4 package5/vbmeta.bin 1048576
+part = dtbo /dtbo ext4 package5/dtbo.bin 8388608
+part = swap swap ext4 package5/swap.bin 536870912
+#part = data /data ext4 package5/data.bin 3313500160
+#part = data /data ext4 package5/data.bin 3309305856
+part = data /data ext4 package5/data.bin 3748659200
+###
+###	  part = (name mount_point filesystem file size)

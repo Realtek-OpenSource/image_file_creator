@@ -4,7 +4,8 @@ DAILYBUILD_PREBUILTS := \
     ALSADaemon \
     DvdPlayer \
     RtkKeyset \
-    fb_init
+    fb_init \
+    gatord \
 
 define define-dailybuild-prebuilt
 include $$(CLEAR_VARS)

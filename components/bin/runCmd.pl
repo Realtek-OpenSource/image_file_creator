@@ -56,6 +56,9 @@ my $enable_offline_gen = $ARGV[8];
 
 my $USED_FILE_CONTEXTS_PATH = "";
 my $FILE_CONTEXTS_PATH ="$package_path/root/file_contexts";
+
+my $SPARSE_HEADER_MAGIC = 0xed26ff3a;
+
 if (-e $FILE_CONTEXTS_PATH)
 {
     system("cp $FILE_CONTEXTS_PATH $tmp_path/file_contexts ");
@@ -338,6 +341,48 @@ sub make_ubifs_image
 
 }
 
+sub check_image_size
+{
+    $partition_label = $_[0];
+
+    $partition_size = $partitions_by_labels{$partition_label}{"image_size"};
+    $image_name = $partitions_by_labels{$partition_label}{"image_name"};
+    $image_size = -s "$tmp_path/pkgfile/$image_name";
+
+    unless (-e "$tmp_path/pkgfile/$image_name")
+    {
+        printf "image %s do not exist, skip check size\n", "$tmp_path/pkgfile/$image_name";
+        return;
+    }
+
+    open(TARGET_IMAGE, '<', "$tmp_path/pkgfile/$image_name") || die "Can't open file!\n";
+    read(TARGET_IMAGE, my $image_magic, 4);
+    $image_magic_le = unpack("V", $image_magic);
+    close(TARGET_IMAGE);
+
+    if ($SPARSE_HEADER_MAGIC eq $image_magic_le)
+    {
+        system("rm -f $tmp_path/carculate_temp.bin");
+        system("$SIMG2IMG $tmp_path/pkgfile/$image_name $tmp_path/carculate_temp.bin")&& exit 1;
+        $image_size = -s "$tmp_path/carculate_temp.bin";
+        system("rm -f $tmp_path/carculate_temp.bin");
+    }
+    else
+    {
+        $image_size = -s "$tmp_path/pkgfile/$image_name";
+    }
+
+    if ($image_size > $partition_size)
+    {
+        printf "The image for %s partition is over size. image size:[%s], partition size:[%s] \n", $partitions_by_labels{$partition_label}{"label"}, $image_size, $partition_size;
+        if ($SPARSE_HEADER_MAGIC eq $image_magic_le)
+        {
+            printf "remember to take care sparse format image\n";
+        }
+        exit 1;
+    }
+}
+
 sub make_ext4_image
 {
     $my_count = $_[0]; # partition count
@@ -374,7 +419,7 @@ sub make_ext4_image
         elsif (($label_name eq "misc") )
         {
             my ($path, $ext4_img) = split /\//, $partitions_by_labels{$label_name}{"image_name"};
-            if (($android_branch eq "android-8") || ($android_branch eq "android-9"))
+            if (($android_branch eq "android-8") || ($android_branch eq "android-9") || ($android_branch eq  "android-q"))
             {
                 my $misc_path= "$package_path/$ext4_img";
                 copy_binary_to_target($misc_path, "$tmp_path/pkgfile/$package/");
@@ -386,7 +431,7 @@ sub make_ext4_image
                 copy_binary_to_target($ext4_img, "$tmp_path/pkgfile/$package/");
             }
         }
-        elsif(($enable_dm_verity eq "y" || $android_branch eq "android-9") && $label_name eq "system")
+        elsif(($enable_dm_verity eq "y" || $android_branch eq "android-9" || $android_branch eq  "android-q") && $label_name eq "system")
         {
             if ($enable_offline_gen eq "y")
             {
@@ -400,7 +445,7 @@ sub make_ext4_image
                 system("cp -rf $ANDROID_PRODUCT_OUT/system.img $tmp_path/pkgfile/$package/system.bin")&& exit 1;
             }
         }
-        elsif ($android_branch eq "android-9" && $label_name eq "vendor")
+        elsif (($android_branch eq "android-9" || $android_branch eq  "android-q") && $label_name eq "vendor")
         {
             if ($enable_offline_gen eq "y")
             {
@@ -445,7 +490,7 @@ sub make_ext4_image
                 system("dd bs=1M count=1 if=/dev/zero of=$tmp_path/pkgfile/$package/$label_name.bin") && exit 1;
             }
         }
-        elsif (($android_branch eq "android-9" || $android_branch eq "android-8") && ($label_name eq "data" || $label_name eq "cache" || $label_name eq "backup"))
+        elsif (($android_branch eq "android-9" || $android_branch eq "android-8" || $android_branch eq  "android-q") && ($label_name eq "data" || $label_name eq "cache" || $label_name eq "backup"))
         {
             printf "===create empty image for %s\n", $label_name;
             system("dd bs=1M count=4 if=/dev/zero of=$tmp_path/pkgfile/$package/$label_name.bin") && exit 1;
@@ -497,6 +542,7 @@ sub make_ext4_image
             printf "processing: %s\n",$ext4_img;
             copy_binary_to_target($ext4_img, "$tmp_path/pkgfile/$package/");
         }
+        check_image_size($label_name);
     }
 }
 

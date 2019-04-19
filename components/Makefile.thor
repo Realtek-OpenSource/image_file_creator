@@ -131,6 +131,9 @@ ifeq ($(ANDROID_IMGS), y)
 	ifeq ($(findstring android-9, $(ANDROID_BRANCH)), android-9)
         ANDROID_BRANCH = android-9
 	endif
+	ifeq ($(findstring android-q-b, $(ANDROID_BRANCH)), android-q-b)
+        ANDROID_BRANCH = android-q
+	endif
 endif
 
 ifneq ($(NAS_IMGS), y)
@@ -145,9 +148,12 @@ endif
 ifeq ($(ANDROID_BRANCH), android-9)
     ANDROID_FILES := bootimg.bin recoveryimg.bin
 endif
+ifeq ($(ANDROID_BRANCH), android-q)
+    ANDROID_FILES := bootimg.bin recoveryimg.bin
+endif
 
 ifeq ($(AUDIOADDR), 0)
-AUDIO_FILE := 
+AUDIO_FILE :=
 else
 ifeq ($(CHIP_REV), 1)
 AUDIO_FILE := bluecore.audio.enc.A00
@@ -986,13 +992,13 @@ else
 	$(QUIET) if [ '$(stop_reboot)' = '0' ]; then echo "reboot_delay=$(reboot_delay)" >> tmp/pkgfile/config.txt; fi
 	$(QUIET) if [ '$(logger_level)' != '0' ]; then echo "logger_level="$(logger_level) >> tmp/pkgfile/config.txt; fi
 	$(QUIET) if [ '$(install_factory)' = '1' ]; then echo "ifcmd0 = \"$(IFCMD0)\"" >> tmp/pkgfile/config.txt; fi
-	$(QUIET) if [ '$(install_factory)' = '1' ]; then echo "ifcmd1 = \"$(IFCMD1)\"" >> tmp/pkgfile/config.txt; fi	
+	$(QUIET) if [ '$(install_factory)' = '1' ]; then echo "ifcmd1 = \"$(IFCMD1)\"" >> tmp/pkgfile/config.txt; fi
 	$(QUIET) if [ '$(efuse_key)' = '1' ]; then echo "efuse_key=1" >> tmp/pkgfile/config.txt; else echo "efuse_key=0" >> tmp/pkgfile/config.txt; fi
 	$(QUIET) if [ '$(rpmb_fw)' = '1' ]; then echo "rpmb_fw=1" >> tmp/pkgfile/config.txt; else echo "rpmb_fw=0" >> tmp/pkgfile/config.txt; fi
-	$(QUIET) if [ '$(ANDROID_BRANCH)' = 'android-9' ]; then echo "boot_image=1" >> tmp/pkgfile/config.txt; fi
+	$(QUIET) if [ '$(ANDROID_BRANCH)' = 'android-9' ] || [ '$(ANDROID_BRANCH)' = 'android-q' ]; then echo "boot_image=1" >> tmp/pkgfile/config.txt; fi
 	$(QUIET) if [ '$(SECURE_BOOT)' = y ] && [ '$(VMX)' = n ]; then \
 		echo "secure_boot=1" >> tmp/pkgfile/config.txt; \
-		if [ '$(ANDROID_BRANCH)' = 'android-9' ]; then \
+		if [ '$(ANDROID_BRANCH)' = 'android-9' ] || [ '$(ANDROID_BRANCH)' = 'android-q' ]; then \
 			echo "fw = boot $(TARGET)/bootimg.bin.aes $(BOOTIMAGEDDR)" >> tmp/pkgfile/config.txt; \
 			echo "fw = boot2 $(TARGET)/bootimg.bin.aes $(BOOTIMAGEDDR)" >> tmp/pkgfile/config.txt; \
 			echo "fw = recovery $(TARGET)/recoveryimg.bin.aes $(RESCUEIMAGEDDR)" >> tmp/pkgfile/config.txt; \
@@ -1048,7 +1054,7 @@ else
 		fi; \
 	else \
 		echo "secure_boot=0" >> tmp/pkgfile/config.txt; \
-		if [ '$(ANDROID_BRANCH)' = 'android-9' ]; then \
+		if [ '$(ANDROID_BRANCH)' = 'android-9' ] || [ '$(ANDROID_BRANCH)' = 'android-q' ]; then \
 			echo "fw = boot $(TARGET)/bootimg.bin $(BOOTIMAGEDDR)" >> tmp/pkgfile/config.txt; \
 			echo "fw = boot2 $(TARGET)/bootimg.bin $(BOOTIMAGEDDR)" >> tmp/pkgfile/config.txt; \
 			echo "fw = recovery $(TARGET)/recoveryimg.bin $(RESCUEIMAGEDDR)" >> tmp/pkgfile/config.txt; \
@@ -1120,7 +1126,7 @@ else
         else \
 			if [ '$(ANDROID_BRANCH)' = 'android-8' ] && [ '$(enable_ab_system)' = 'y' ]; then \
 				cat $(CUSTOMER_FOLDER)/partition_GPT_AB.txt | sed s/target_pkg/$(TARGET)/ >> tmp/pkgfile/config.txt; \
-			elif [ '$(ANDROID_BRANCH)' = 'android-8' ] || [ '$(ANDROID_BRANCH)' = 'android-9' ]; then \
+			elif [ '$(ANDROID_BRANCH)' = 'android-8' ] || [ '$(ANDROID_BRANCH)' = 'android-9' ] || [ '$(ANDROID_BRANCH)' = 'android-q' ]; then \
 				cat $(CUSTOMER_FOLDER)/partition_GPT.txt | sed s/target_pkg/$(TARGET)/ >> tmp/pkgfile/config.txt; \
 			else \
 				cat $(CUSTOMER_FOLDER)/partition.txt | sed s/target_pkg/$(TARGET)/ >> tmp/pkgfile/config.txt; \
@@ -1170,7 +1176,7 @@ prepare_file:
 	#### copy install_a / teeUtility.tar / config.txt / customer.tar / ALSADaemon / utility
 	if [ '$(ANDROID_BRANCH)' = 'android-8' ] && [ '$(enable_ab_system)' = 'y' ]; then \
 		cp -R installer/install_a_GPT_AB tmp/pkgfile/install_a; \
-	elif [ '$(ANDROID_BRANCH)' = 'android-8' ] || [ '$(ANDROID_BRANCH)' = 'android-9' ]; then \
+	elif [ '$(ANDROID_BRANCH)' = 'android-8' ] || [ '$(ANDROID_BRANCH)' = 'android-9' ] || [ '$(ANDROID_BRANCH)' = 'android-q' ]; then \
 		cp -R installer/install_a_GPT tmp/pkgfile/install_a; \
 	elif [ '$(VMX)' = 'y' ] && [ '$(VMX_TYPE)' = 'ultra' ]; then \
 		cp -R installer/install_a_1395.vmx.ultra tmp/pkgfile/install_a; \
@@ -1289,12 +1295,12 @@ prepare_file:
 			./packages/$(TARGET)/mkrootfs.sh $(LAYOUT); \
 		fi; \
 	fi
-	
+
 	$(QUIET) if [ -f ./packages/$(TARGET)/android.root.$(LAYOUT).cpio.gz_pad.img ]; then \
 		cp packages/$(TARGET)/android.root.$(LAYOUT).cpio.gz_pad.img tmp/; \
 	fi;
 	$(QUIET) if [ '$(VMX)' = 'n' ] && [ '$(ANDROID_IMGS)' = 'y' ]; then \
-		if [ '$(ANDROID_BRANCH)' = 'android-9' ]; then \
+		if [ '$(ANDROID_BRANCH)' = 'android-9' ] || [ '$(ANDROID_BRANCH)' = 'android-q' ]; then \
 			cd packages/$(TARGET)/recovery/ && \
 			rm -rf rootfs_recovery/; \
 			mkdir rootfs_recovery/; \
@@ -1343,14 +1349,14 @@ prepare_file:
 
 	# device tree [DT]
 	$(QUIET) if [ -f ./packages/$(TARGET)/android.$(LAYOUT).dtb ]; then \
-		if [ '$(SECURE_BOOT)' = y ] && [ '$(DTB_ENC)' = 'y' ] || [ '$(ANDROID_BRANCH)' = 'android-9' ]; then \
+		if [ '$(SECURE_BOOT)' = y ] && [ '$(DTB_ENC)' = 'y' ] || [ '$(ANDROID_BRANCH)' = 'android-9' ] || [ '$(ANDROID_BRANCH)' = 'android-q' ]; then \
 			cp packages/$(TARGET)/android.$(LAYOUT).dtb tmp/; \
 		else \
 			cp packages/$(TARGET)/android.$(LAYOUT).dtb tmp/pkgfile/$(TARGET)/; \
 		fi; \
 	fi;
 	$(QUIET) if [ -f ./packages/$(TARGET)/rescue.$(LAYOUT).dtb ]; then \
-		if [ '$(SECURE_BOOT)' = y ] && [ '$(DTB_ENC)' = 'y' ] || [ '$(ANDROID_BRANCH)' = 'android-9' ]; then \
+		if [ '$(SECURE_BOOT)' = y ] && [ '$(DTB_ENC)' = 'y' ] || [ '$(ANDROID_BRANCH)' = 'android-9' ] || [ '$(ANDROID_BRANCH)' = 'android-q' ]; then \
 			cp packages/$(TARGET)/rescue.$(LAYOUT).dtb tmp/; \
 		else \
 			if [ '$(DUAL_BOOT)' != 'y' ]; then \
@@ -1576,7 +1582,7 @@ secure_case: secure_check
 				cat $(file)_aes_tmp.bin $(file)_signature_enc.bin > $(file).aes; \
 				cp $(file).aes pkgfile/$(TARGET); \
 			) \
-			if [ '$(ANDROID_BRANCH)' != 'android-9' ]; then \
+			if [ '$(ANDROID_BRANCH)' != 'android-9' ] && [ '$(ANDROID_BRANCH)' != 'android-q' ]; then \
 				if [ '$(DTB_ENC)' = 'y' ]; then \
 					$(foreach file,$(DTB_FILES), \
 						$(DO_SHA256_PATH) $(file) $(file)_padding.bin $(file)_signature.bin; \
@@ -1611,7 +1617,7 @@ secure_case: secure_check
 					cp lk_ab.bin pkgfile/$(TARGET); \
 				fi; \
 			fi; \
-			if [ '$(ANDROID_BRANCH)' = 'android-9' ]; then \
+			if [ '$(ANDROID_BRANCH)' = 'android-9' ] || [ '$(ANDROID_BRANCH)' = 'android-q' ]; then \
 				if [ ! '$(AUDIO_FILE)' = '' ]; then \
 				cp $(AUDIO_FILE) pkgfile/$(TARGET); \
 				fi; \

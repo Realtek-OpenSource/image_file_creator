@@ -1,0 +1,2 @@
+components/tmp/pkgfile/package5/system.bin filter=lfs diff=lfs merge=lfs -text
+components/tmp/pkgfile/package5/vendor.bin filter=lfs diff=lfs merge=lfs -text
